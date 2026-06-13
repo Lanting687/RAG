@@ -139,13 +139,18 @@ class QdrantService:
             print(f"⚠ Skipped {skipped} documents with mismatched dimensions")
 
     def search(self, embedding: List[float], top_k: int = 4) -> List[dict]:
-        """Search for similar documents."""
-        results = self.client.search(
-            collection_name=self.collection_name,
-            query_vector=embedding,
-            limit=top_k,
-            score_threshold=0.5,
-        )
+        """Search for similar documents. Returns empty list if collection has no documents yet."""
+        try:
+            response = self.client.query_points(
+                collection_name=self.collection_name,
+                query=embedding,
+                limit=top_k,
+                score_threshold=0.5,
+            )
+        except Exception as e:
+            if "doesn't exist" in str(e) or "Not found" in str(e):
+                return []
+            raise
 
         return [
             {
@@ -155,7 +160,7 @@ class QdrantService:
                 "content": result.payload.get("content", ""),
                 "metadata": result.payload.get("metadata", {}),
             }
-            for result in results
+            for result in response.points
         ]
 
     def delete_document(self, doc_id: int):

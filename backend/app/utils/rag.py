@@ -86,10 +86,16 @@ async def ask_gemini(question: str, snippets: List[str]) -> str:
     """
     context = "\n\n".join(snippets)
     prompt_text = (
-        f"{build_system_prompt()}\n\n"
-        f"Audit knowledge context:\n{context}\n\n"
-        f"Question: {question}\nAnswer:"
-    )
+    f"{build_system_prompt()}\n\n"
+    "Use ALL relevant information from the audit knowledge context.\n"
+    "Provide a COMPLETE answer.\n"
+    "If multiple requirements are mentioned, include ALL of them.\n"
+    "Use bullet points where appropriate.\n"
+    "Do not provide a partial summary.\n\n"
+    f"Audit knowledge context:\n{context}\n\n"
+    f"Question: {question}\n\n"
+    "Answer:")
+
 
     chat_payload = {
         "contents": [
@@ -97,7 +103,7 @@ async def ask_gemini(question: str, snippets: List[str]) -> str:
         ],
         "generationConfig": {
             "temperature": 0.2,
-            "maxOutputTokens": 800,
+            "maxOutputTokens": 2000,
         }
     }
 
