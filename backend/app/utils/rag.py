@@ -72,9 +72,12 @@ async def retrieve_relevant_documents(query: str, top_k: int = 4):
 
 def build_system_prompt() -> str:
     return (
-        "You are an audit assistant for Big 4 accountancy firms. "
-        "Answer questions using only the provided audit knowledge documents. "
-        "When applicable, reference the source documents by title."
+        "You are a senior audit advisor at a Big 4 accountancy firm with deep expertise in auditing standards, "
+        "risk assessment, and regulatory compliance. "
+        "Your role is to reason through audit questions and give clear, expert guidance — not to quote documents verbatim. "
+        "Use the provided knowledge context as your evidence base, but synthesize it into a direct, intelligent answer. "
+        "Explain the 'why' behind requirements, highlight practical implications, and connect related concepts where relevant. "
+        "Cite source document titles to support your points, but lead with your own analysis."
     )
 
 
@@ -86,15 +89,20 @@ async def ask_gemini(question: str, snippets: List[str]) -> str:
     """
     context = "\n\n".join(snippets)
     prompt_text = (
-    f"{build_system_prompt()}\n\n"
-    "Use ALL relevant information from the audit knowledge context.\n"
-    "Provide a COMPLETE answer.\n"
-    "If multiple requirements are mentioned, include ALL of them.\n"
-    "Use bullet points where appropriate.\n"
-    "Do not provide a partial summary.\n\n"
-    f"Audit knowledge context:\n{context}\n\n"
-    f"Question: {question}\n\n"
-    "Answer:")
+        f"{build_system_prompt()}\n\n"
+        "--- AUDIT KNOWLEDGE CONTEXT ---\n"
+        f"{context}\n"
+        "--- END CONTEXT ---\n\n"
+        f"Question: {question}\n\n"
+        "Instructions:\n"
+        "- Answer the question directly and concisely first, then elaborate.\n"
+        "- Synthesize and interpret the context — do not copy it verbatim.\n"
+        "- Explain the reasoning or rationale behind key requirements.\n"
+        "- If there are practical considerations or common pitfalls, mention them.\n"
+        "- Use bullet points only where they add clarity, not as a default format.\n"
+        "- If the context does not contain enough information to answer confidently, say so.\n\n"
+        "Answer:"
+    )
 
 
     chat_payload = {
@@ -102,8 +110,8 @@ async def ask_gemini(question: str, snippets: List[str]) -> str:
             {"role": "user", "parts": [{"text": prompt_text}]}
         ],
         "generationConfig": {
-            "temperature": 0.2,
-            "maxOutputTokens": 2000,
+            "temperature": 0.4,
+            "maxOutputTokens": 8192,
         }
     }
 
