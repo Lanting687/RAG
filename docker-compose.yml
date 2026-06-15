@@ -1,15 +1,4 @@
 services:
-  db:
-    image: postgres:15
-    environment:
-      POSTGRES_USER: rag_user
-      POSTGRES_PASSWORD: rag_password
-      POSTGRES_DB: rag_db
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    ports:
-      - '5432:5432'
-
   qdrant:
     image: qdrant/qdrant:latest
     environment:
@@ -19,6 +8,21 @@ services:
     ports:
       - '6333:6333'
 
+  backend:
+    build: ./backend
+    env_file:
+      - ./backend/.env
+    ports:
+      - '8000:8000'
+    depends_on:
+      - qdrant
+
+  frontend:
+    build: ./frontend
+    ports:
+      - '80:80'
+    depends_on:
+      - backend
+
 volumes:
-  postgres_data:
   qdrant_data:

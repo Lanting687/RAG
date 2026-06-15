@@ -1,6 +1,5 @@
 from pydantic import BaseModel
 from typing import Optional, List
-from datetime import datetime
 
 
 class ChatRequest(BaseModel):
@@ -12,8 +11,6 @@ class DocumentRead(BaseModel):
     title: str
     content: str
     metadata: Optional[dict] = None
-
-    model_config = {"from_attributes": True}
 
 
 class ChatResponse(BaseModel):
@@ -34,6 +31,3 @@ class DocumentReadFull(BaseModel):
     content: str
     source: Optional[str] = None
     metadata: Optional[dict] = None
-    created_at: Optional[datetime] = None
-
-    model_config = {"from_attributes": True}
