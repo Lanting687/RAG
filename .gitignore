@@ -1,27 +1,27 @@
-# Python
-__pycache__/
-*.py[cod]
-*.pyo
-*.pyd
+# ── Secrets ──────────────────────────────────────────────────────────────────
 .env
-venv/
-.venv/
-
-# Backend
-backend/__pycache__/
 backend/.env
-backend/.venv/
 
-# Frontend
-frontend/node_modules/
+# ── Python ───────────────────────────────────────────────────────────────────
+**/__pycache__/
+**/*.py[cod]
+**/*.pyo
+**/*.pyd
+**/.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# ── Frontend ──────────────────────────────────────────────────────────────────
+**/node_modules/
 frontend/dist/
+frontend/.env
 
-# IDE
-.vscode/
+# ── IDE ───────────────────────────────────────────────────────────────────────
 .idea/
+.vscode/
 
-# Misc
-.DS_Store
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
+# ── macOS ─────────────────────────────────────────────────────────────────────
+**/.DS_Store
