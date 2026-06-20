@@ -121,6 +121,7 @@ const styles: Record<string, React.CSSProperties> = {
     fontFamily: 'system-ui, sans-serif',
     padding: '0 16px',
     boxSizing: 'border-box',
+    backgroundColor: '#d1fae5',
   },
   header: { padding: '24px 0 8px', borderBottom: '1px solid #e5e7eb' },
   title: { margin: 0, fontSize: 22, fontWeight: 700, color: '#111827' },
