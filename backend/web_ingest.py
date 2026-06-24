@@ -31,6 +31,12 @@ TRUSTED_DOMAINS = {
     "iaasb.org",
     "fasb.org",
     "iosco.org",
+    "icas.com",
+    "icaew.com",
+    "ey.com",
+    "kpmg.com",
+    "pwc.com",
+    "deloitte.com",
 }
 
 BRAVE_SEARCH_ENDPOINT = "https://api.search.brave.com/res/v1/web/search"
