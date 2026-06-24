@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException
 from app.schemas import ChatRequest, ChatResponse, DocumentRead
 from app.utils.rag import retrieve_relevant_documents, ask_gemini
+from web_ingest import ingest_for_question
 
 router = APIRouter()
 
@@ -9,6 +10,11 @@ router = APIRouter()
 async def chat(request: ChatRequest):
     if not request.question.strip():
         raise HTTPException(status_code=400, detail="Question cannot be empty.")
+
+    try:
+        await ingest_for_question(request.question)
+    except Exception as exc:
+        print(f"Web enrichment skipped: {exc}")
 
     try:
         relevant = await retrieve_relevant_documents(request.question, top_k=8)

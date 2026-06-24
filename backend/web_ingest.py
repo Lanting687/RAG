@@ -19,7 +19,7 @@ import httpx
 import trafilatura
 
 from app.config import settings
-from app.utils.rag import chunk_text, embed_text
+from app.utils.rag import chunk_text, embed_text, generate_search_queries
 from app.utils.qdrant_service import get_qdrant_service
 
 TRUSTED_DOMAINS = {
@@ -208,6 +208,29 @@ async def ingest(query: str, max_results: int, allowed_domains: set[str], clear:
         "skipped": skipped,
         "ingested_titles": ingested_titles,
     }
+
+
+async def ingest_for_question(question: str, max_results_per_query: int = 5) -> dict:
+    """Expand a user question into targeted search queries and ingest matching
+    authoritative content into Qdrant before retrieval/answering."""
+    queries = await generate_search_queries(question)
+    print(f"Generated {len(queries)} search quer{'y' if len(queries) == 1 else 'ies'} for: '{question}'")
+    for q in queries:
+        print(f"  - {q}")
+
+    aggregate = {"found": 0, "trusted": 0, "ingested": 0, "skipped": 0, "ingested_titles": []}
+    for q in queries:
+        try:
+            result = await ingest(query=q, max_results=max_results_per_query, allowed_domains=TRUSTED_DOMAINS)
+        except RuntimeError as e:
+            print(f"  ERROR enriching for query '{q}': {e}")
+            continue
+        aggregate["found"] += result["found"]
+        aggregate["trusted"] += result["trusted"]
+        aggregate["ingested"] += result["ingested"]
+        aggregate["skipped"] += result["skipped"]
+        aggregate["ingested_titles"].extend(result["ingested_titles"])
+    return aggregate
 
 
 def main():

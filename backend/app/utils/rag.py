@@ -1,4 +1,5 @@
 import asyncio
+import json
 from typing import List
 import httpx
 from app.config import settings
@@ -50,6 +51,50 @@ async def embed_text(text: str, client: httpx.AsyncClient | None = None) -> List
         return await _do_request(client)
     async with httpx.AsyncClient(timeout=30.0) as owned_client:
         return await _do_request(owned_client)
+
+
+async def generate_search_queries(question: str, client: httpx.AsyncClient | None = None) -> List[str]:
+    endpoint = str(settings.gemini_chat_endpoint)
+    _validate_endpoint(endpoint, "Chat")
+
+    prompt_text = (
+        "Given the following audit/accounting question, generate 3 to 5 highly specific web search "
+        "queries that would help retrieve authoritative guidance to answer it.\n\n"
+        "Prioritize sources in this order:\n"
+        "1. ISA (International Standards on Auditing)\n"
+        "2. PCAOB standards\n"
+        "3. SEC guidance\n"
+        "4. Big Four technical publications (EY, KPMG, PwC, Deloitte)\n"
+        "5. General audit methodology resources\n\n"
+        f"Question: {question}\n\n"
+        "Respond with ONLY a JSON array of 3 to 5 search query strings — no explanation, no markdown.\n"
+        'Example: ["ISA 315 risk assessment requirements", "PCAOB AS 2110 risk assessment"]'
+    )
+    payload = {
+        "contents": [{"role": "user", "parts": [{"text": prompt_text}]}],
+        "generationConfig": {"temperature": 0.3, "maxOutputTokens": 512},
+    }
+
+    async def _do_request(c: httpx.AsyncClient) -> List[str]:
+        for attempt in range(1, 4):
+            response = await c.post(endpoint, headers=_build_headers(endpoint), json=payload)
+            if response.status_code in (503, 429):
+                await asyncio.sleep(2 ** (attempt - 1))
+                continue
+            response.raise_for_status()
+            text = response.json()["candidates"][0]["content"]["parts"][0]["text"]
+            text = text.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
+            queries = json.loads(text)
+            return [q for q in queries if isinstance(q, str) and q.strip()][:5]
+        raise RuntimeError(f"Gemini endpoint returned {response.status_code} after retries")
+
+    try:
+        if client is not None:
+            return await _do_request(client)
+        async with httpx.AsyncClient(timeout=30.0) as owned_client:
+            return await _do_request(owned_client)
+    except Exception:
+        return [question]
 
 
 async def retrieve_relevant_documents(query: str, top_k: int = 4):
