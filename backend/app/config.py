@@ -20,6 +20,8 @@ class Settings(BaseSettings):
     confluence_username: str | None = None
     confluence_api_token: str | None = None
 
+    brave_api_key: str | None = None
+
     @field_validator("cors_origins", mode="before")
     @classmethod
     def parse_cors_origins(cls, v):
