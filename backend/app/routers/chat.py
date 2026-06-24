@@ -5,6 +5,12 @@ from web_ingest import ingest_for_question
 
 router = APIRouter()
 
+CONFIDENCE_THRESHOLD = 0.65
+
+
+def _is_confident(docs) -> bool:
+    return bool(docs) and max(doc.score for doc in docs) >= CONFIDENCE_THRESHOLD
+
 
 @router.post("/chat", response_model=ChatResponse)
 async def chat(request: ChatRequest):
@@ -12,14 +18,16 @@ async def chat(request: ChatRequest):
         raise HTTPException(status_code=400, detail="Question cannot be empty.")
 
     try:
-        await ingest_for_question(request.question)
-    except Exception as exc:
-        print(f"Web enrichment skipped: {exc}")
-
-    try:
         relevant = await retrieve_relevant_documents(request.question, top_k=8)
     except Exception as exc:
         raise HTTPException(status_code=502, detail=f"Vector search failed: {exc}")
+
+    if not _is_confident(relevant):
+        try:
+            await ingest_for_question(request.question)
+            relevant = await retrieve_relevant_documents(request.question, top_k=8)
+        except Exception as exc:
+            print(f"Web enrichment skipped: {exc}")
 
     if not relevant:
         return ChatResponse(
