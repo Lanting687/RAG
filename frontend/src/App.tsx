@@ -14,6 +14,14 @@ interface Message {
   sources?: Source[]
 }
 
+const SUGGESTED_QUESTIONS = [
+  "What are EY's specific audit engagement steps for a new client?",
+  "What is KPMG's policy on travel and reimbursement for audit staff?",
+  "What are PwC's quality control procedures for engagement risk assessment?",
+  "What does Deloitte's audit methodology say about testing internal controls?",
+  "What are ICAEW's requirements for auditor independence and rotation?",
+]
+
 export default function App() {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
@@ -25,9 +33,7 @@ export default function App() {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, loading])
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    const question = input.trim()
+  async function submitQuestion(question: string) {
     if (!question || loading) return
 
     setInput('')
@@ -48,6 +54,11 @@ export default function App() {
     }
   }
 
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    await submitQuestion(input.trim())
+  }
+
   return (
     <div style={styles.page}>
       <header style={styles.header}>
@@ -57,7 +68,19 @@ export default function App() {
 
       <div style={styles.chatContainer}>
         {messages.length === 0 && (
-          <p style={styles.empty}>No messages yet. Ask a question to get started.</p>
+          <div style={styles.suggestions}>
+            <p style={styles.empty}>No messages yet. Try one of these, or ask your own question.</p>
+            {SUGGESTED_QUESTIONS.map((q, i) => (
+              <button
+                key={i}
+                style={styles.suggestionButton}
+                onClick={() => submitQuestion(q)}
+                disabled={loading}
+              >
+                {q}
+              </button>
+            ))}
+          </div>
         )}
 
         {messages.map((msg, i) => (
@@ -135,6 +158,17 @@ const styles: Record<string, React.CSSProperties> = {
     gap: 12,
   },
   empty: { color: '#9ca3af', textAlign: 'center', marginTop: 40, fontSize: 14 },
+  suggestions: { display: 'flex', flexDirection: 'column', gap: 8, marginTop: 16 },
+  suggestionButton: {
+    textAlign: 'left',
+    padding: '10px 14px',
+    borderRadius: 8,
+    border: '1px solid #a7f3d0',
+    background: '#ecfdf5',
+    color: '#065f46',
+    fontSize: 13,
+    cursor: 'pointer',
+  },
   userBubble: {
     alignSelf: 'flex-end',
     background: '#2563eb',

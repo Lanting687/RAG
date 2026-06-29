@@ -97,6 +97,73 @@ async def generate_search_queries(question: str, client: httpx.AsyncClient | Non
         return [question]
 
 
+async def is_audit_related(question: str, client: httpx.AsyncClient | None = None) -> bool:
+    endpoint = str(settings.gemini_chat_endpoint)
+    _validate_endpoint(endpoint, "Chat")
+
+    prompt_text = (
+        "Is the following question related to auditing, accounting, financial reporting, "
+        "or audit firm policies/procedures? Answer with ONLY one word: YES or NO.\n\n"
+        f"Question: {question}"
+    )
+    payload = {
+        "contents": [{"role": "user", "parts": [{"text": prompt_text}]}],
+        "generationConfig": {"temperature": 0.0, "maxOutputTokens": 10},
+    }
+
+    async def _do_request(c: httpx.AsyncClient) -> bool:
+        for attempt in range(1, 4):
+            response = await c.post(endpoint, headers=_build_headers(endpoint), json=payload)
+            if response.status_code in (503, 429):
+                await asyncio.sleep(2 ** (attempt - 1))
+                continue
+            response.raise_for_status()
+            text = response.json()["candidates"][0]["content"]["parts"][0]["text"]
+            return text.strip().upper().startswith("Y")
+        raise RuntimeError(f"Gemini endpoint returned {response.status_code} after retries")
+
+    try:
+        if client is not None:
+            return await _do_request(client)
+        async with httpx.AsyncClient(timeout=30.0) as owned_client:
+            return await _do_request(owned_client)
+    except Exception:
+        return True  # fail open — don't block users if classification itself fails
+
+
+async def ask_gemini_with_grounding(question: str) -> str:
+    endpoint = str(settings.gemini_chat_endpoint)
+    _validate_endpoint(endpoint, "Chat")
+
+    prompt_text = (
+        f"{build_system_prompt()}\n\n"
+        f"Question: {question}\n\n"
+        "Use web search to find authoritative, current information to answer this audit/accounting "
+        "question. Prioritize ISA standards, PCAOB standards, SEC guidance, and Big Four technical "
+        "publications. Cite your sources."
+    )
+    payload = {
+        "contents": [{"role": "user", "parts": [{"text": prompt_text}]}],
+        "tools": [{"google_search": {}}],
+        "generationConfig": {"temperature": 0.4, "maxOutputTokens": 8192},
+    }
+
+    async with httpx.AsyncClient(timeout=60.0) as client:
+        for attempt in range(1, 4):
+            response = await client.post(endpoint, headers=_build_headers(endpoint), json=payload)
+            if response.status_code in (503, 429):
+                await asyncio.sleep(2 ** (attempt - 1))
+                continue
+            response.raise_for_status()
+            data = response.json()
+            if "candidates" in data and data["candidates"]:
+                parts = data["candidates"][0].get("content", {}).get("parts", [])
+                if parts and "text" in parts[0]:
+                    return parts[0]["text"]
+            raise RuntimeError("Empty response from Gemini grounding")
+        raise RuntimeError(f"Gemini grounding endpoint returned {response.status_code} after retries")
+
+
 async def retrieve_relevant_documents(query: str, top_k: int = 4):
     query_embedding = await embed_text(query)
     results = await get_qdrant_service().search(query_embedding, top_k=top_k)
