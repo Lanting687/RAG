@@ -7,7 +7,7 @@ router = APIRouter()
 
 CONFIDENCE_THRESHOLD = 0.65
 
-
+#
 def _is_confident(docs) -> bool:
     return bool(docs) and max(doc.score for doc in docs) >= CONFIDENCE_THRESHOLD
 
