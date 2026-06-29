@@ -103,7 +103,12 @@ class QdrantService:
             }
             if offset is not None:
                 body["offset"] = offset
-            data = await self._post(f"/collections/{self.collection}/points/scroll", body)
+            try:
+                data = await self._post(f"/collections/{self.collection}/points/scroll", body)
+            except httpx.HTTPStatusError as e:
+                if e.response.status_code == 404:
+                    break
+                raise
             result = data.get("result", {})
             for p in result.get("points", []):
                 meta = p["payload"].get("metadata", {})
