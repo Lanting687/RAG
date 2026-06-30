@@ -52,16 +52,21 @@ class QdrantService:
     async def _ensure_collection(self, dim: int):
         if self.vector_size is not None:
             return
+        created = False
         try:
             await self._put(f"/collections/{self.collection}",
                             {"vectors": {"size": dim, "distance": "Cosine"}})
             self.vector_size = dim
+            created = True
         except httpx.HTTPStatusError as e:
             if e.response.status_code == 409:
                 data = await self._get(f"/collections/{self.collection}")
                 self.vector_size = data["result"]["config"]["params"]["vectors"]["size"]
             else:
                 raise
+        if created:
+            await self._put(f"/collections/{self.collection}/index",
+                            {"field_name": "metadata.chunk_index", "field_schema": "integer"})
 
     async def upsert_document(self, doc_id: int, embedding: List[float], metadata: dict):
         await self._ensure_collection(len(embedding))
