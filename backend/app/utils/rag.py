@@ -1,9 +1,12 @@
 import asyncio
 import json
+import logging
 from typing import List
 import httpx
 from app.config import settings
 from app.utils.qdrant_service import get_qdrant_service
+
+logger = logging.getLogger(__name__)
 
 
 def _build_headers(endpoint: str) -> dict:
@@ -127,7 +130,8 @@ async def is_audit_related(question: str, client: httpx.AsyncClient | None = Non
             return await _do_request(client)
         async with httpx.AsyncClient(timeout=30.0) as owned_client:
             return await _do_request(owned_client)
-    except Exception:
+    except Exception as exc:
+        logger.warning("is_audit_related classification failed, failing open (allowing question): %s", exc)
         return True  # fail open — don't block users if classification itself fails
 
 
