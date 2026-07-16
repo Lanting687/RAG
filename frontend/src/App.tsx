@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { sendChatMessage } from './api'
+import './App.css'
 
 interface Source {
   id: number
@@ -14,39 +15,63 @@ interface Message {
   sources?: Source[]
 }
 
-const SUGGESTED_QUESTIONS = [
-  "What are EY's specific audit engagement steps for a new client?",
-  "What is KPMG's policy on travel and reimbursement for audit staff?",
-  "What are PwC's quality control procedures for engagement risk assessment?",
-  "What does Deloitte's audit methodology say about testing internal controls?",
-  "What are ICAEW's requirements for auditor independence and rotation?",
+interface Chat {
+  id: string
+  title: string
+  messages: Message[]
+}
+
+const PROMPT_CARDS = [
+  { title: 'Engagement Planning', icon: '📋', prompt: "What are EY's specific audit engagement steps for a new client?" },
+  { title: 'Internal Controls',   icon: '🔒', prompt: "What does audit methodology say about testing internal controls?" },
+  { title: 'Independence',        icon: '⚖️', prompt: "What are ICAEW's requirements for auditor independence and rotation?" },
+  { title: 'Risk Assessment',     icon: '📊', prompt: "What are PwC's quality control procedures for engagement risk assessment?" },
 ]
 
+const CAPABILITY_CHIPS = ['Confluence Search', 'Source References', 'Semantic Retrieval', 'Audit Guidance']
+
+type ActiveNav = 'home' | 'history'
+
 export default function App() {
-  const [messages, setMessages] = useState<Message[]>([])
+  const [chats, setChats] = useState<Chat[]>([])
+  const [currentChatId, setCurrentChatId] = useState<string | null>(null)
+  const [activeNav, setActiveNav] = useState<ActiveNav>('home')
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [darkMode, setDarkMode] = useState(false)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
+
+  const currentMessages = chats.find(c => c.id === currentChatId)?.messages ?? []
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages, loading])
+  }, [currentMessages, loading])
 
   async function submitQuestion(question: string) {
     if (!question || loading) return
-
     setInput('')
     setError(null)
-    setMessages(prev => [...prev, { role: 'user', content: question }])
+    setSidebarOpen(false)
+    setActiveNav('home')
+
+    let chatId = currentChatId
+    if (!chatId) {
+      chatId = crypto.randomUUID()
+      const title = question.length > 42 ? question.slice(0, 42) + '…' : question
+      setChats(prev => [{ id: chatId!, title, messages: [] }, ...prev])
+      setCurrentChatId(chatId)
+    }
+
+    const userMsg: Message = { role: 'user', content: question }
+    setChats(prev => prev.map(c => c.id === chatId ? { ...c, messages: [...c.messages, userMsg] } : c))
     setLoading(true)
 
     try {
       const data = await sendChatMessage(question)
-      setMessages(prev => [
-        ...prev,
-        { role: 'assistant', content: data.answer, sources: data.sources ?? [] },
-      ])
+      const assistantMsg: Message = { role: 'assistant', content: data.answer, sources: data.sources ?? [] }
+      setChats(prev => prev.map(c => c.id === chatId ? { ...c, messages: [...c.messages, assistantMsg] } : c))
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unexpected error')
     } finally {
@@ -59,157 +84,193 @@ export default function App() {
     await submitQuestion(input.trim())
   }
 
+  function handleHome() {
+    setCurrentChatId(null)
+    setInput('')
+    setError(null)
+    setActiveNav('home')
+    setSidebarOpen(false)
+  }
+
+  function handleNewChat() {
+    setCurrentChatId(null)
+    setInput('')
+    setError(null)
+    setActiveNav('home')
+    setSidebarOpen(false)
+  }
+
+  function handleSelectChat(id: string) {
+    setCurrentChatId(id)
+    setInput('')
+    setError(null)
+    setActiveNav('home')
+    setSidebarOpen(false)
+  }
+
   return (
-    <div style={styles.page}>
-      <header style={styles.header}>
-        <h1 style={styles.title}>Big 4 Audit RAG Chatbot</h1>
-        <p style={styles.subtitle}>Ask questions about your audit knowledge base</p>
-      </header>
+    <div className={`app${darkMode ? ' dark' : ''}`}>
 
-      <div style={styles.chatContainer}>
-        {messages.length === 0 && (
-          <div style={styles.suggestions}>
-            <p style={styles.empty}>No messages yet. Try one of these, or ask your own question.</p>
-            {SUGGESTED_QUESTIONS.map((q, i) => (
-              <button
-                key={i}
-                style={styles.suggestionButton}
-                onClick={() => submitQuestion(q)}
-                disabled={loading}
-              >
-                {q}
-              </button>
-            ))}
+      {/* Mobile overlay */}
+      {sidebarOpen && <div className="mobile-overlay" onClick={() => setSidebarOpen(false)} />}
+
+      {/* ── Sidebar ── */}
+      <aside className={`sidebar${sidebarOpen ? ' open' : ''}`}>
+
+        <div className="sidebar-logo">
+          <div className="logo-icon">A</div>
+          <span className="logo-text">Audit Knowledge<br />Assistant</span>
+        </div>
+
+        <nav className="sidebar-nav">
+          <button
+            className={`nav-item${activeNav === 'home' ? ' active' : ''}`}
+            onClick={handleHome}
+          >
+            <span className="nav-icon">🏠</span> Home
+          </button>
+          <button className="nav-item" onClick={handleNewChat}>
+            <span className="nav-icon">✏️</span> New Chat
+          </button>
+          <button
+            className={`nav-item${activeNav === 'history' ? ' active' : ''}`}
+            onClick={() => setActiveNav(n => n === 'history' ? 'home' : 'history')}
+          >
+            <span className="nav-icon">🕐</span> Chat History
+          </button>
+        </nav>
+
+        {/* Chat history list */}
+        <div className="history-section">
+          <p className="history-header">Recent</p>
+          <div className="history-list">
+            {chats.length === 0
+              ? <p className="history-empty">No conversations yet</p>
+              : chats.map(chat => (
+                  <button
+                    key={chat.id}
+                    className={`history-item${chat.id === currentChatId ? ' active' : ''}`}
+                    onClick={() => handleSelectChat(chat.id)}
+                    title={chat.title}
+                  >
+                    💬 {chat.title}
+                  </button>
+                ))
+            }
           </div>
-        )}
+        </div>
 
-        {messages.map((msg, i) => (
-          <div key={i} style={msg.role === 'user' ? styles.userBubble : styles.assistantBubble}>
-            <div style={styles.roleLabel}>{msg.role === 'user' ? 'You' : 'Assistant'}</div>
-            <p style={styles.messageText}>{msg.content}</p>
-            {msg.sources && msg.sources.length > 0 && (
-              <details style={styles.sources}>
-                <summary style={styles.sourcesSummary}>
-                  {msg.sources.length} source{msg.sources.length !== 1 ? 's' : ''}
-                </summary>
-                {msg.sources.map(src => (
-                  <div key={src.id} style={styles.sourceItem}>
-                    <strong>{src.title}</strong>
-                    <p style={styles.sourceSnippet}>
-                      {src.content.length > 200 ? src.content.slice(0, 200) + '…' : src.content}
-                    </p>
-                  </div>
+        <div className="sidebar-bottom">
+          <button className="theme-toggle" onClick={() => setDarkMode(d => !d)}>
+            {darkMode ? '☀️ Light mode' : '🌙 Dark mode'}
+          </button>
+          <p className="version">v1.0.0</p>
+        </div>
+
+      </aside>
+
+      {/* ── Main panel ── */}
+      <main className="main">
+
+        {/* Mobile top bar */}
+        <div className="mobile-bar">
+          <button className="hamburger" onClick={() => setSidebarOpen(o => !o)}>☰</button>
+          <span className="mobile-title">Audit Knowledge Assistant</span>
+          <button className="hamburger" onClick={() => setDarkMode(d => !d)}>
+            {darkMode ? '☀️' : '🌙'}
+          </button>
+        </div>
+
+        {/* Chat / welcome area */}
+        <div className="chat-area">
+          {currentMessages.length === 0 ? (
+            <div className="empty-state">
+              <div className="product-icon">📚</div>
+              <h1 className="empty-title">Audit Knowledge Assistant</h1>
+              <p className="empty-subtitle">
+                Retrieve relevant audit guidance and receive source-backed answers.
+              </p>
+
+              <div className="chips">
+                {CAPABILITY_CHIPS.map(chip => (
+                  <span key={chip} className="chip">{chip}</span>
                 ))}
-              </details>
-            )}
-          </div>
-        ))}
+              </div>
 
-        {loading && (
-          <div style={styles.assistantBubble}>
-            <div style={styles.roleLabel}>Assistant</div>
-            <p style={styles.thinking}>Thinking…</p>
-          </div>
-        )}
+              <div className="card-grid">
+                {PROMPT_CARDS.map(card => (
+                  <button
+                    key={card.title}
+                    className="prompt-card"
+                    disabled={loading}
+                    onClick={() => submitQuestion(card.prompt)}
+                  >
+                    <span className="card-icon">{card.icon}</span>
+                    <span className="card-title">{card.title}</span>
+                    <span className="card-desc">{card.prompt}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="messages">
+              {currentMessages.map((msg, i) => (
+                <div key={i} className={msg.role === 'user' ? 'user-bubble' : 'assistant-bubble'}>
+                  <div className="role-label">{msg.role === 'user' ? 'You' : 'Assistant'}</div>
+                  <p className="message-text">{msg.content}</p>
+                  {msg.sources && msg.sources.length > 0 && (
+                    <details>
+                      <summary className="sources-summary">
+                        {msg.sources.length} source{msg.sources.length !== 1 ? 's' : ''}
+                      </summary>
+                      {msg.sources.map(src => (
+                        <div key={src.id} className="source-item">
+                          <div className="source-title">{src.title}</div>
+                          <p className="source-snippet">
+                            {src.content.length > 200 ? src.content.slice(0, 200) + '…' : src.content}
+                          </p>
+                        </div>
+                      ))}
+                    </details>
+                  )}
+                </div>
+              ))}
 
-        {error && <p style={styles.error}>{error}</p>}
+              {loading && (
+                <div className="assistant-bubble">
+                  <div className="role-label">Assistant</div>
+                  <p className="thinking">Thinking…</p>
+                </div>
+              )}
 
-        <div ref={bottomRef} />
-      </div>
+              {error && <p className="error-msg">{error}</p>}
+              <div ref={bottomRef} />
+            </div>
+          )}
+        </div>
 
-      <form onSubmit={handleSubmit} style={styles.form}>
-        <input
-          style={styles.input}
-          type="text"
-          placeholder="Ask about audit procedures, standards, or regulations…"
-          value={input}
-          onChange={e => setInput(e.target.value)}
-          disabled={loading}
-        />
-        <button style={styles.button} type="submit" disabled={loading || !input.trim()}>
-          Send
-        </button>
-      </form>
+        {/* ── Input bar ── */}
+        <div className="input-bar">
+          <form className="input-form" onSubmit={handleSubmit}>
+            <input
+              className="input-field"
+              type="text"
+              placeholder="Ask about audit methodology, standards or procedures..."
+              value={input}
+              onChange={e => setInput(e.target.value)}
+              disabled={loading}
+            />
+            <button
+              className="send-button"
+              type="submit"
+              disabled={loading || !input.trim()}
+            >
+              Send
+            </button>
+          </form>
+        </div>
+
+      </main>
     </div>
   )
-}
-
-const styles: Record<string, React.CSSProperties> = {
-  page: {
-    display: 'flex',
-    flexDirection: 'column',
-    height: '100vh',
-    maxWidth: 800,
-    margin: '0 auto',
-    fontFamily: 'system-ui, sans-serif',
-    padding: '0 16px',
-    boxSizing: 'border-box',
-    backgroundColor: '#d1fae5',
-  },
-  header: { padding: '24px 0 8px', borderBottom: '1px solid #e5e7eb' },
-  title: { margin: 0, fontSize: 22, fontWeight: 700, color: '#111827' },
-  subtitle: { margin: '4px 0 0', fontSize: 14, color: '#6b7280' },
-  chatContainer: {
-    flex: 1,
-    overflowY: 'auto',
-    padding: '16px 0',
-    display: 'flex',
-    flexDirection: 'column',
-    gap: 12,
-  },
-  empty: { color: '#9ca3af', textAlign: 'center', marginTop: 40, fontSize: 14 },
-  suggestions: { display: 'flex', flexDirection: 'column', gap: 8, marginTop: 16 },
-  suggestionButton: {
-    textAlign: 'left',
-    padding: '10px 14px',
-    borderRadius: 8,
-    border: '1px solid #a7f3d0',
-    background: '#ecfdf5',
-    color: '#065f46',
-    fontSize: 13,
-    cursor: 'pointer',
-  },
-  userBubble: {
-    alignSelf: 'flex-end',
-    background: '#2563eb',
-    color: '#fff',
-    borderRadius: '12px 12px 2px 12px',
-    padding: '10px 14px',
-    maxWidth: '75%',
-  },
-  assistantBubble: {
-    alignSelf: 'flex-start',
-    background: '#f3f4f6',
-    color: '#111827',
-    borderRadius: '12px 12px 12px 2px',
-    padding: '10px 14px',
-    maxWidth: '85%',
-  },
-  roleLabel: { fontSize: 11, fontWeight: 600, opacity: 0.7, marginBottom: 4, textTransform: 'uppercase' },
-  messageText: { margin: 0, lineHeight: 1.6, whiteSpace: 'pre-wrap' },
-  thinking: { margin: 0, fontStyle: 'italic', opacity: 0.6 },
-  sources: { marginTop: 8 },
-  sourcesSummary: { fontSize: 12, cursor: 'pointer', color: '#4b5563' },
-  sourceItem: { marginTop: 6, padding: '6px 8px', background: '#e5e7eb', borderRadius: 6 },
-  sourceSnippet: { margin: '2px 0 0', fontSize: 12, color: '#6b7280' },
-  error: { color: '#dc2626', fontSize: 14, textAlign: 'center' },
-  form: { display: 'flex', gap: 8, padding: '12px 0 20px', borderTop: '1px solid #e5e7eb' },
-  input: {
-    flex: 1,
-    padding: '10px 14px',
-    borderRadius: 8,
-    border: '1px solid #d1d5db',
-    fontSize: 14,
-    outline: 'none',
-  },
-  button: {
-    padding: '10px 20px',
-    background: '#2563eb',
-    color: '#fff',
-    border: 'none',
-    borderRadius: 8,
-    fontSize: 14,
-    fontWeight: 600,
-    cursor: 'pointer',
-  },
 }
