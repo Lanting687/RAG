@@ -22,10 +22,10 @@ interface Chat {
 }
 
 const PROMPT_CARDS = [
-  { title: 'Engagement Planning', icon: '📋', prompt: "What are EY's specific audit engagement steps for a new client?" },
-  { title: 'Internal Controls',   icon: '🔒', prompt: "What does audit methodology say about testing internal controls?" },
-  { title: 'Independence',        icon: '⚖️', prompt: "What are ICAEW's requirements for auditor independence and rotation?" },
-  { title: 'Risk Assessment',     icon: '📊', prompt: "What are PwC's quality control procedures for engagement risk assessment?" },
+  { title: 'Audit Planning',    icon: '📋', prompt: "What are the key steps in planning a new audit engagement?" },
+  { title: 'Risk Assessment',   icon: '📊', prompt: "How should an auditor identify and assess risks of material misstatement?" },
+  { title: 'Internal Controls', icon: '🔒', prompt: "What procedures are required to evaluate the effectiveness of internal controls?" },
+  { title: 'Audit Evidence',    icon: '🔍', prompt: "What constitutes sufficient and appropriate audit evidence?" },
 ]
 
 const CAPABILITY_CHIPS = ['Confluence Search', 'Source References', 'Semantic Retrieval', 'Audit Guidance']
