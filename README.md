@@ -9,6 +9,8 @@ A retrieval-augmented generation chatbot that answers audit and accounting quest
 ![AWS](https://img.shields.io/badge/AWS-EC2-orange)
 ![Qdrant](https://img.shields.io/badge/Qdrant-Vector_DB-red)
 ![Gemini](https://img.shields.io/badge/Google-Gemini-yellow)
+![CI/CD](https://img.shields.io/badge/CI%2FCD-GitHub_Actions-2088FF)
+![GitHub Actions](https://img.shields.io/badge/GitHub_Actions-Automated_Deploy-black?logo=github)
 ## Pain Point
 - Audit relies on large amounts of internal guidance and technical documentation.
 - Finding the right information can take time, especially when it is spread across pages.
