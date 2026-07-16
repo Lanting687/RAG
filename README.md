@@ -1,3 +1,5 @@
+<div align="center">
+
 # Audit Knowledge Assistant
 A retrieval-augmented generation chatbot that answers audit and accounting questions. It connects to Confluence, retrieves internal knowledge base and generates the grounded answers with reference sources.
 
@@ -11,6 +13,8 @@ A retrieval-augmented generation chatbot that answers audit and accounting quest
 ![Gemini](https://img.shields.io/badge/Google-Gemini-yellow)
 ## Live Demo
 [http://auditor_bot.jumpingcrab.com](http://auditor_bot.jumpingcrab.com)
+
+</div>
 
 ## Pain Point
 - Audit relies on large amounts of internal guidance and technical documentation.
