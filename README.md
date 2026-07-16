@@ -1,5 +1,12 @@
 # Audit Knowledge Assistant
-A retrieval-augmented generation chatbot that answers audit and accounting questions. It connects to Confluence, retrieves internal knowledge base and generates the grounded answers with reference sources. 
+A retrieval-augmented generation chatbot that answers audit and accounting questions. It connects to Confluence, retrieves internal knowledge base and generates the grounded answers with reference sources.
+
+[![Deploy to EC2](https://github.com/Lanting687/RAG/actions/workflows/deploy.yml/badge.svg)](https://github.com/Lanting687/RAG/actions/workflows/deploy.yml)
+![Python](https://img.shields.io/badge/Python-3.11-blue)
+![FastAPI](https://img.shields.io/badge/FastAPI-Backend-green)
+![React](https://img.shields.io/badge/React-Frontend-blue)
+![Docker](https://img.shields.io/badge/Docker-Containerised-blue)
+![AWS](https://img.shields.io/badge/AWS-EC2-orange) 
 ## Pain Point
 - Audit relies on large amounts of internal guidance and technical documentation.
 - Finding the right information can take time, especially when it is spread across pages.
