@@ -1,0 +1,1 @@
+A retrieval-augmented generation chatbot that can answer your question specific to an organisation. It connects to Confluence, and retrieves internal knowledge base and generate the grounded answers with reference sources. 
